@@ -102,7 +102,8 @@ bootstrap_zshell() {
         dotbot_init zsh
     )
 
-    chsh -s /bin/zsh
+    # We need to use sudo to avoid having to enter a password.
+    sudo chsh -s /bin/zsh "$USER"
 }
 
 bootstrap_terminfo() {
