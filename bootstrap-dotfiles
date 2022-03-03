@@ -6,6 +6,7 @@ this_file="$(readlink -f "$0")"
 dotfiles_dir="$HOME/.local/dotfiles"
 zsh_repo="https://github.com/cassava/dotfiles.zsh.git"
 nvim_repo="https://github.com/cassava/dotfiles.nvim.git"
+alacritty_terminfo="https://raw.githubusercontent.com/alacritty/alacritty/master/extra/alacritty.info"
 
 exit_success=0
 exit_failure=1
@@ -55,7 +56,8 @@ dotbot_init() {
 }
 
 bootstrap_requires() {
-    # Install required packages
+    printf "bootstrap requires ................................................."
+
     case $(package_manager) in
         "apt")
             apt_install     \
@@ -78,7 +80,8 @@ bootstrap_requires() {
 }
 
 bootstrap_neovim() {
-    # Clone and initialize Neovim repo
+    printf "bootstrap neovim ..................................................."
+
     mkdir -p "$dotfiles_dir"
 
     (
@@ -89,7 +92,8 @@ bootstrap_neovim() {
 }
 
 bootstrap_zshell() {
-    # Clone and initialize Zsh repo
+    printf "bootstrap zsh ......................................................"
+
     mkdir -p "$dotfiles_dir"
 
     (
@@ -102,10 +106,15 @@ bootstrap_zshell() {
 }
 
 bootstrap_terminfo() {
-    echo "-> Copying alacritty terminfo"
-    ssh $1 mkdir -p .terminfo/a
-    scp /usr/share/terminfo/a/alacritty $1:.terminfo/a/
-    scp /usr/share/terminfo/a/alacritty-direct $1:.terminfo/a/
+    printf "bootstrap terminfo ................................................."
+
+    if infocmp alacritty; then
+        return
+    fi
+
+    local tmpfile="$(mktemp -u --suffix=.info /tmp/bootstrap-XXXXXX)"
+    curl -s "$alacritty_terminfo" > "$tmpfile"
+    sudo tic -xe alacritty,alacritty-direct "$tmpfile"
 }
 
 bootstrap_all() {
@@ -172,7 +181,9 @@ else
             ;;
         *)
             usage
-            exit 1
+            exit $exit_failure
             ;;
     esac
 fi
+
+exit $exit_success
