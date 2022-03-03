@@ -109,7 +109,7 @@ bootstrap_zshell() {
 bootstrap_terminfo() {
     printf "bootstrap terminfo .................................................\n"
 
-    if infocmp alacritty; then
+    if infocmp alacritty >/dev/null; then
         return
     fi
 
