@@ -56,7 +56,7 @@ dotbot_init() {
 }
 
 bootstrap_requires() {
-    printf "bootstrap requires ................................................."
+    printf "bootstrap requires .................................................\n"
 
     case $(package_manager) in
         "apt")
@@ -80,7 +80,7 @@ bootstrap_requires() {
 }
 
 bootstrap_neovim() {
-    printf "bootstrap neovim ..................................................."
+    printf "bootstrap neovim ...................................................\n"
 
     mkdir -p "$dotfiles_dir"
 
@@ -92,7 +92,7 @@ bootstrap_neovim() {
 }
 
 bootstrap_zshell() {
-    printf "bootstrap zsh ......................................................"
+    printf "bootstrap zsh ......................................................\n"
 
     mkdir -p "$dotfiles_dir"
 
@@ -106,7 +106,7 @@ bootstrap_zshell() {
 }
 
 bootstrap_terminfo() {
-    printf "bootstrap terminfo ................................................."
+    printf "bootstrap terminfo .................................................\n"
 
     if infocmp alacritty; then
         return
