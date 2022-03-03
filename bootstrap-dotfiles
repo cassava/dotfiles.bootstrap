@@ -1,0 +1,178 @@
+#!/bin/bash
+set -e
+
+this_file="$(readlink -f "$0")"
+
+dotfiles_dir="$HOME/.local/dotfiles"
+zsh_repo="https://github.com/cassava/dotfiles.zsh.git"
+nvim_repo="https://github.com/cassava/dotfiles.nvim.git"
+
+exit_success=0
+exit_failure=1
+exit_aborted=4
+
+package_manager() {
+    if command -v apt &>/dev/null; then
+        echo "apt"
+    elif command -v apt-get &>/dev/null; then
+        echo "apt"
+    elif command -v pacman &>/dev/null; then
+        echo "pacman"
+    else
+        echo "unknown"
+    fi
+}
+
+pacman_install() {
+    sudo pacman -Sy --needed "$@"
+}
+
+apt_install() {
+    if command -v apt &>/dev/null; then
+        sudo apt update
+        sudo apt install "$@"
+    else
+        sudo apt-get update
+        sudo apt-get install "$@"
+    fi
+}
+
+pip_install() {
+    if command -v pipx &>/dev/null; then
+        pipx install "$@"
+    elif command -v pip3 &>/dev/null; then
+        pip3 install --user "$@"
+    else
+        python -m pip install --user "$@"
+    fi
+}
+
+dotbot_init() {
+    (
+        cd "$1"
+        $HOME/.local/bin/dotbot --config-file install.conf.yaml
+    )
+}
+
+bootstrap_requires() {
+    # Install required packages
+    case $(package_manager) in
+        "apt")
+            apt_install     \
+                python3-pip \
+                git
+            ;;
+        "pacman")
+            pacman_install \
+                python-pip \
+                git
+            ;;
+        *)
+            echo "Error: no suitable package manager found." >&2
+            exit $exit_aborted
+            ;;
+    esac
+
+    # Install dotbot
+    pip_install "dotbot"
+}
+
+bootstrap_neovim() {
+    # Clone and initialize Neovim repo
+    mkdir -p "$dotfiles_dir"
+
+    (
+        cd "$dotfiles_dir"
+        test -d nvim || git clone "$nvim_repo" nvim
+        dotbot_init nvim
+    )
+}
+
+bootstrap_zshell() {
+    # Clone and initialize Zsh repo
+    mkdir -p "$dotfiles_dir"
+
+    (
+        cd "$dotfiles_dir"
+        test -d zsh || git clone "$zsh_repo" zsh
+        dotbot_init zsh
+    )
+
+    chsh -s /bin/zsh
+}
+
+bootstrap_terminfo() {
+    echo "-> Copying alacritty terminfo"
+    ssh $1 mkdir -p .terminfo/a
+    scp /usr/share/terminfo/a/alacritty $1:.terminfo/a/
+    scp /usr/share/terminfo/a/alacritty-direct $1:.terminfo/a/
+}
+
+bootstrap_all() {
+    bootstrap_requires
+    bootstrap_zshell
+    bootstrap_neovim
+    bootstrap_terminfo
+}
+
+bootstrap_remote() {
+    local host="$1"
+    ssh-copy-id "$host"
+    ssh-copy-terminfo "$host"
+    scp "$this_file" "$host:bootstrap.sh"
+    ssh "$host" "./bootstrap.sh"
+}
+
+usage() {
+    cat <<EOF
+Usage: bootstrap [command]
+
+This script bootstraps a new system with a single command.
+Supported distributions are Archlinux and Ubuntu.
+
+Commands:
+    requires  install dependencies required for dotfiles
+    dotfiles  clone the dotfiles repos and initialize them
+    neovim    clone dotfiles.nvim and initialize
+    zshell    clone dotfiles.zsh and initialize
+    terminfo  install terminfo files for selected terminals
+    all       perform all of the above
+    help      show help and exit
+
+If no command is specified, all is assumed.
+
+Tip: Install quickly on a new system with:
+
+    curl -sSf https://raw.githubusercontent.com/cassava/dotfiles.bootstrap/main/bootstrap-dotfiles | bash
+EOF
+}
+
+if [[ $# -eq 0 ]]; then
+    bootstrap_all
+else
+    case $1 in
+        requires)
+            bootstrap_requires
+            ;;
+        dotfiles)
+            bootstrap_zshell
+            bootstrap_neovim
+            ;;
+        zsh|zshell)
+            bootstrap_zshell
+            ;;
+        terminfo)
+            bootstrap_terminfo
+            ;;
+        all)
+            bootstrap_all
+            ;;
+        help|--help)
+            usage
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+fi
