@@ -171,6 +171,9 @@ else
         zsh|zshell)
             bootstrap_zshell
             ;;
+        nvim|neovim)
+            bootstrap_neovim
+            ;;
         terminfo)
             bootstrap_terminfo
             ;;
